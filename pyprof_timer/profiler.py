@@ -159,7 +159,7 @@ class Profiler(object):
             return
 
         current_depth = 0
-        frame_name = ('c_' if is_c else '') + unicode(frame)
+        frame_name = ('c_' if is_c else '') + str(frame)
         if event in Profiler.CALL_EVENTS:
             # Increment the depth of the call stack.
             self._ctx_local_vars['call_stack_depths'][ctx] += 1
