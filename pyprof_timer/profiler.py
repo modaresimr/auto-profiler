@@ -12,7 +12,7 @@ import six
 from .timer import Timer
 import os
 workingdir = os.getcwd()
-
+import random ;
 class OrderedDefaultDictInt(collections.OrderedDict):
     def __missing__(self, key):
         self[key] = value = 0
@@ -40,13 +40,26 @@ class _FrameNameCounter(object):
     def incr(self, frame, name):
         self._counts[(frame, name)] += 1
 
-    def unique_name(self, frame, name):
+    def unique_name(self, ctx, frame, name):
         """Return an unique name for function `name` in frame `frame`."""
+
         count = self._counts[(frame, name)]
         unique_name = self.raw_name(frame, name)
         if count > 1:
             unique_name += str(count - 1)
-        return unique_name
+        return unique_name+str(ctx)
+
+    def unique_name2(self, ctx, frame, name,depth):
+        """Return an unique name for function `name` in frame `frame`."""
+        fcode=frame.f_code
+        unique_name=('%s [%s:%s]\n')% (fcode.co_filename, fcode.co_firstlineno, fcode.co_name)
+        # count = self._counts[(frame, name)]
+        if depth>=0 and frame.f_back:
+            fcode = frame.f_back.f_code
+            #parent_name =('%s [%s:%s]\n')% (fcode.co_filename, fcode.co_firstlineno, fcode.co_name)
+            unique_name += self.unique_name2(ctx,frame.f_back, None,depth-1)      
+
+        return unique_name+str(ctx)
 
     @property
     def first_frame(self):
@@ -104,7 +117,14 @@ class Profiler(object):
         fn = (fcode.co_filename, fcode.co_firstlineno, fcode.co_name)
         return self._format_func_name(*fn)
 
+    _stack=[]
     def enable(self):
+        if(len(Profiler._stack)>0):
+            print(RuntimeError('Can not handle internal use of deprecated '))
+            return False
+        
+        Profiler._stack.append('i')
+        
         # It's necessary to delay calling `timer_class.get_context()` here
         # if this profiler is used as a decorator.
         ctx = self._timer_class.get_context()
@@ -118,6 +138,10 @@ class Profiler(object):
         return self
 
     def disable(self):
+        Profiler._stack.pop()
+        if(len(self._stack)>0):
+            print('Error')
+        
         sys.setprofile(None)
 
         # It's necessary to delay calling `timer_class.get_context()` here
@@ -172,6 +196,7 @@ class Profiler(object):
                 return
             if not parent_frame.f_code.co_filename.startswith(workingdir):
                 return
+
         current_depth = 0
         frame_name = ('c_' if is_c else '') + str(frame)
         if event in Profiler.CALL_EVENTS:
@@ -196,35 +221,39 @@ class Profiler(object):
         if event in Profiler.CALL_EVENTS:
             ctx_local_counter.incr(frame, func_name)
 
-            unique_func_name = ctx_local_counter.unique_name(frame, func_name)
-
+            unique_func_name = ctx_local_counter.unique_name(ctx,frame, func_name)
+            unique_func_name = ctx_local_counter.unique_name2(ctx,frame, func_name,current_depth)
             if frame is ctx_local_counter.first_frame:
                 unique_parent_name = None
             else:
                 parent_name = self._get_func_name(parent_frame)
-                unique_parent_name = ctx_local_counter.unique_name(
-                    parent_frame, parent_name)
+                unique_parent_name = ctx_local_counter.unique_name2(ctx,
+                    parent_frame, parent_name,current_depth-1)
 
             # Create and start a timer for the entering function
-            self._timer_class(
-                unique_func_name,
-                parent_name=unique_parent_name,
-                display_name=func_name
-            ).start()
+            timer = self._timer_class.timers.get(unique_func_name)
+            if timer is None:
+                timer=self._timer_class(
+                    unique_func_name,
+                    parent_name=unique_parent_name,
+                    display_name=func_name
+                )
+            timer.start()
         elif event in Profiler.RETURN_EVENTS:
-            unique_func_name = ctx_local_counter.unique_name(frame, func_name)
+            unique_func_name = ctx_local_counter.unique_name2(ctx,frame, func_name,current_depth)
             timer = self._timer_class.timers.get(unique_func_name)
             if timer is not None:
                 # Stop the timer for the exiting function
                 timer.stop()
 
+    
     def __call__(self, func):
         """Make the profiler object to be a decorator."""
         @functools.wraps(func)
         def decorator(*args, **kwargs):
-            self.enable()
-            try:
-                return func(*args, **kwargs)
-            finally:
-                self.disable()
+            if(self.enable()):
+                try:
+                    return func(*args, **kwargs)
+                finally:
+                    self.disable()
         return decorator
