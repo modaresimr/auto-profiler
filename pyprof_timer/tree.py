@@ -14,17 +14,24 @@ class Tree(object):
     timers as a tree.
     """
 
-    def __init__(self, timer, span_unit='s', span_fmt='%.3f'):
+    def __init__(self, timer, span_unit='s', span_fmt='%.3f',threshold=0.5):
         self._timer = timer
         self._span_unit = span_unit
         self._span_fmt = span_fmt
+        self._threshold=threshold
 
     @property
     def nodes(self):
         span = self._span_fmt % self._timer.span(self._span_unit)
         node = '%s%s  %s' % (span, self._span_unit, self._timer.display_name)
-        children = [Tree(child, self._span_unit, self._span_fmt).nodes
-                    for child in self._timer.children]
+        children=[]
+        for child in self._timer.children:
+            if(child.span()<self._threshold):
+                # print('ignore short functions:',child.display_name)
+                continue
+            children.append(Tree(child, self._span_unit, self._span_fmt).nodes)
+        # children = [Tree(child, self._span_unit, self._span_fmt).nodes
+        #             for child in self._timer.children]
         return node, children
 
     def __str__(self):
