@@ -10,7 +10,8 @@ import sys
 import six
 
 from .timer import Timer
-
+import os
+workingdir = os.getcwd()
 
 class OrderedDefaultDictInt(collections.OrderedDict):
     def __missing__(self, key):
@@ -157,7 +158,20 @@ class Profiler(object):
         # Ignore the excluded functions.
         if func_name in self._excluded_func_names:
             return
-
+        # if 'site-packages' in self._get_func_name(parent_frame):
+        #     return
+        # if 'python' in func_name and 'python' in self._get_func_name(parent_frame):
+        #     return
+        
+        # if 'builtins'in func_name and 'python' in self._get_func_name(parent_frame):
+        #     return
+        # print('not ignoreing',func_name,self._get_func_name(parent_frame))
+        
+        if not frame.f_code.co_filename.startswith(workingdir):
+            if not(parent_frame):
+                return
+            if not parent_frame.f_code.co_filename.startswith(workingdir):
+                return
         current_depth = 0
         frame_name = ('c_' if is_c else '') + str(frame)
         if event in Profiler.CALL_EVENTS:
@@ -175,6 +189,8 @@ class Profiler(object):
         # Ignore the frame if its depth exceeds the specified depth.
         if self._depth is not None and current_depth > self._depth:
             return
+        
+
 
         ctx_local_counter = self._ctx_local_vars['counters'][ctx]
         if event in Profiler.CALL_EVENTS:
