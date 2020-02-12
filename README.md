@@ -8,7 +8,7 @@ A timer for profiling a Python function or snippet.
 - Allow depth: you can easily find the time consuming function
 - Allow loop or multiple function call
 - Allow recursive function call
-
+- Disable it globaly by Profiler.GlobalDisable=True to save time :)
 ## Installation
 
 Release version:
