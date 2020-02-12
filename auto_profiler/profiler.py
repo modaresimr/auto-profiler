@@ -12,7 +12,7 @@ import six
 from .timer import Timer
 import os
 workingdir = os.getcwd()
-import random ;
+
 class OrderedDefaultDictInt(collections.OrderedDict):
     def __missing__(self, key):
         self[key] = value = 0
@@ -69,6 +69,7 @@ class _FrameNameCounter(object):
 
 
 class Profiler(object):
+    GlobalDisable=False
     """The profiler class that automatically injects a timer for each
     function to measure its execution time.
     """
@@ -114,8 +115,15 @@ class Profiler(object):
 
     def _get_func_name(self, frame):
         fcode = frame.f_code
-        fn = (fcode.co_filename, fcode.co_firstlineno, fcode.co_name)
-        return self._format_func_name(*fn)
+        fback=frame.f_back
+        if(fback):
+            fn = (fback.f_code.co_filename, fback.f_lineno, fcode.co_name)
+            fn2 = (fcode.co_filename, frame.f_lineno, '')
+            return self._format_func_name(*fn)+self._format_func_name(*fn2)
+        else :
+            fn = (fcode.co_filename, frame.f_lineno, fcode.co_name)
+            return self._format_func_name(*fn)
+        
 
     _stack=[]
     def enable(self):
@@ -251,6 +259,9 @@ class Profiler(object):
         """Make the profiler object to be a decorator."""
         @functools.wraps(func)
         def decorator(*args, **kwargs):
+            if(Profiler.GlobalDisable):
+                return func(*args, **kwargs)
+            
             if(self.enable()):
                 try:
                     return func(*args, **kwargs)

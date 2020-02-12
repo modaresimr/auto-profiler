@@ -1,4 +1,4 @@
-# auto-profiler
+# auto_profiler
 
 A timer for profiling a Python function or snippet.
 
@@ -14,13 +14,13 @@ A timer for profiling a Python function or snippet.
 Release version:
 
 ```bash
-$ pip install auto-profiler
+$ pip install auto_profiler
 ```
 
 Development version:
 
 ```bash
-$ pip install -e git+https://github.com/modaresimr/auto-profiler.git#egg=auto-profiler
+$ pip install -e git+https://github.com/modaresimr/auto_profiler.git#egg=auto_profiler
 ```
 
 
@@ -49,6 +49,8 @@ def fact(i):
 
 
 def show(p):
+    print('Time   [Hits * PerHit] Function name [Called from] [Function Location]\n'+\
+          '-----------------------------------------------------------------------')
     print(Tree(p.root, threshold=0.5))
     
 @Profiler(depth=4, on_disable=show)

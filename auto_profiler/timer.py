@@ -96,6 +96,9 @@ class Timer(object):
 
         self._start = None
         self._stop = None
+        self._duration=0
+        self._num_start_call=0
+        self._num_stop_call=0
         self._children = []
 
         if self._parent_name is not None:
@@ -151,16 +154,24 @@ class Timer(object):
     def children(self):
         return self._children
 
+    
     def start(self):
+        if(self._num_stop_call!=self._num_start_call):
+            raise RuntimeError('timer %s: new start called before stoping previous timer' % self._name)
+
         self._start = monotonic.monotonic()
+        self._num_start_call+=1
+
         return self
 
     def stop(self):
         if not self._dummy and self._start is None:
             raise RuntimeError('timer %s: .start() has not been called' % self._name)
-
+        if(self._num_stop_call>=self._num_start_call):
+            raise RuntimeError('timer %s: new stop called before starting timer' % self._name)
         self._stop = monotonic.monotonic()
-
+        self._num_stop_call+=1
+        self._duration+=self._stop-self._start
         # If a callback function is given, call it after this timer is stopped.
         if self._on_stop_callback is not None:
             self._on_stop_callback(self)
@@ -185,7 +196,8 @@ class Timer(object):
         if self._stop is None:
             raise RuntimeError('timer %s: .stop() has not been called' % self._name)
 
-        return (self._stop - self._start) * multipliers[unit]
+        #return (self._stop - self._start) * multipliers[unit]
+        return self._duration * multipliers[unit]
 
     @classmethod
     def time(cls, name, parent_name=None, on_stop=None, display_name=None):

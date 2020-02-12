@@ -22,8 +22,11 @@ class Tree(object):
 
     @property
     def nodes(self):
-        span = self._span_fmt % self._timer.span(self._span_unit)
-        node = '%s%s  %s' % (span, self._span_unit, self._timer.display_name)
+        tim=self._timer.span(self._span_unit)
+        span = self._span_fmt % tim
+        per_call=self._span_fmt % (tim/self._timer._num_start_call)
+        node = '%s%s [%d * %s]  %s' % (span, self._span_unit, self._timer._num_start_call,per_call, self._timer.display_name)
+        # node = '%s%s [%d]  %s\n%s\nparents=%s' % (span, self._span_unit, self._timer._num_start_call, self._timer.display_name,self._timer._name,self._timer._parent_name)
         children=[]
         for child in self._timer.children:
             if(child.span()<self._threshold):
