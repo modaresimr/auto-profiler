@@ -10,7 +10,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name='auto_profiler',
-    version=1.6,
+    version=1.7,
     description='A timer for profiling a Python function or snippet.',
     long_description=long_description,
     long_description_content_type="text/markdown",
