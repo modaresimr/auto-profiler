@@ -281,7 +281,8 @@ class Profiler(object):
                 timer = self._timer_class(
                     unique_func_name,
                     parent_name=unique_parent_name,
-                    display_name=func_name
+                    display_name=func_name,
+                    on_stop=None
                 )
             timer.start()
         elif event in Profiler.RETURN_EVENTS:

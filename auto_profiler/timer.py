@@ -66,6 +66,13 @@ class _TimerMap(object):
         timers[name] = timer
 
 
+def default_show(p):
+    from .tree import Tree
+    print('Time   [Hits * PerHit] Function name [Called from] [Function Location]\n' +
+          '-----------------------------------------------------------------------')
+    print(Tree(p.root, threshold=0.5))
+
+
 class Timer(object):
     """The timer class for profiling a Python function or snippet.
 
@@ -86,7 +93,7 @@ class Timer(object):
 
     _timer_map = _TimerMap()
 
-    def __init__(self, name, parent_name=None, on_stop=None,
+    def __init__(self, name, parent_name=None, on_stop=default_show,
                  dummy=False, display_name=None):
         self._name = name
         self._parent_name = parent_name
