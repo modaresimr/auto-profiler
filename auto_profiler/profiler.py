@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import absolute_import, unicode_literals
+from . import Tree
 
 import collections
 import functools
@@ -12,6 +13,7 @@ import six
 from .timer import Timer
 import os
 workingdir = os.getcwd()
+
 
 class OrderedDefaultDictInt(collections.OrderedDict):
     def __missing__(self, key):
@@ -49,15 +51,15 @@ class _FrameNameCounter(object):
             unique_name += str(count - 1)
         return unique_name+str(ctx)
 
-    def unique_name2(self, ctx, frame, name,depth):
+    def unique_name2(self, ctx, frame, name, depth):
         """Return an unique name for function `name` in frame `frame`."""
-        fcode=frame.f_code
-        unique_name=('%s [%s:%s]\n')% (fcode.co_filename, fcode.co_firstlineno, fcode.co_name)
+        fcode = frame.f_code
+        unique_name = ('%s [%s:%s]\n') % (fcode.co_filename, fcode.co_firstlineno, fcode.co_name)
         # count = self._counts[(frame, name)]
-        if depth>=0 and frame.f_back:
+        if depth >= 0 and frame.f_back:
             fcode = frame.f_back.f_code
             #parent_name =('%s [%s:%s]\n')% (fcode.co_filename, fcode.co_firstlineno, fcode.co_name)
-            unique_name += self.unique_name2(ctx,frame.f_back, None,depth-1)      
+            unique_name += self.unique_name2(ctx, frame.f_back, None, depth-1)
 
         return unique_name+str(ctx)
 
@@ -67,14 +69,15 @@ class _FrameNameCounter(object):
         default = (None, None)
         return next(iter(six.iterkeys(self._counts)), default)[0]
 
-from . import Tree
+
 def default_show(p):
-    print('Time   [Hits * PerHit] Function name [Called from] [Function Location]\n'+\
+    print('Time   [Hits * PerHit] Function name [Called from] [Function Location]\n' +
           '-----------------------------------------------------------------------')
     print(Tree(p.root, threshold=0.5))
 
+
 class Profiler(object):
-    GlobalDisable=False
+    GlobalDisable = False
     """The profiler class that automatically injects a timer for each
     function to measure its execution time.
     """
@@ -82,10 +85,13 @@ class Profiler(object):
     CALL_EVENTS = ('call', 'c_call')
     RETURN_EVENTS = ('return', 'exception', 'c_return', 'c_exception')
 
-    def __init__(self, timer_class=Timer, depth=4, on_disable=default_show):
+    def __init__(self, timer_class=Timer, depth=4, on_disable=default_show, filterExternalLibraries=True, eliminateWorkspacePath=True, eliminateExternalLibrariesPath=True):
         self._timer_class = timer_class
         self._depth = depth
         self._on_disable_callback = on_disable
+        self._filterExternalLibraries = filterExternalLibraries
+        self._eliminateWorkspacePath = eliminateWorkspacePath
+        self._eliminateExternalLibrariesPath = eliminateExternalLibrariesPath
 
         self._ctx_local_vars = dict(
             # Mapping: context -> call_stack_depth [PER CONTEXT]
@@ -114,30 +120,37 @@ class Profiler(object):
             self._format_func_name(current_filename, 119, 'disable'),
         )
 
-    @staticmethod
-    def _format_func_name(filename, firstlineno, name):
-        return '{2}  [{0}:{1}]'.format(filename, firstlineno, name)
+    def _format_func_name(self, filename, firstlineno, name):
+        return '{2}  [{0}:{1}]'.format(self._filterPath(filename), firstlineno, name)
+
+    def _filterPath(self, path):
+        if (self._eliminateWorkspacePath and path.startswith(workingdir)):
+            return path[len(workingdir)+1:]
+        if (self._eliminateWorkspacePath and 'site-packages/' in path):
+            return path.split('site-packages/')[1]
+        if (self._eliminateWorkspacePath and 'python/' in path):
+            return path.split('python/')[1]
 
     def _get_func_name(self, frame):
         fcode = frame.f_code
-        fback=frame.f_back
-        if(fback):
+        fback = frame.f_back
+        if (fback):
             fn = (fback.f_code.co_filename, fback.f_lineno, fcode.co_name)
             fn2 = (fcode.co_filename, frame.f_lineno, '')
             return self._format_func_name(*fn)+self._format_func_name(*fn2)
-        else :
+        else:
             fn = (fcode.co_filename, frame.f_lineno, fcode.co_name)
             return self._format_func_name(*fn)
-        
 
-    _stack=[]
+    _stack = []
+
     def enable(self):
-        if(len(Profiler._stack)>0):
+        if (len(Profiler._stack) > 0):
             print(RuntimeError('Can not handle internal use of deprecated '))
             return False
-        
+
         Profiler._stack.append('i')
-        
+
         # It's necessary to delay calling `timer_class.get_context()` here
         # if this profiler is used as a decorator.
         ctx = self._timer_class.get_context()
@@ -152,9 +165,9 @@ class Profiler(object):
 
     def disable(self):
         Profiler._stack.pop()
-        if(len(self._stack)>0):
+        if (len(self._stack) > 0):
             print('Error')
-        
+
         sys.setprofile(None)
 
         # It's necessary to delay calling `timer_class.get_context()` here
@@ -199,13 +212,13 @@ class Profiler(object):
         #     return
         # if 'python' in func_name and 'python' in self._get_func_name(parent_frame):
         #     return
-        
+
         # if 'builtins'in func_name and 'python' in self._get_func_name(parent_frame):
         #     return
         # print('not ignoreing',func_name,self._get_func_name(parent_frame))
-        
-        if not frame.f_code.co_filename.startswith(workingdir):
-            if not(parent_frame):
+
+        if self._filterExternalLibraries and not frame.f_code.co_filename.startswith(workingdir):
+            if not (parent_frame):
                 return
             if not parent_frame.f_code.co_filename.startswith(workingdir):
                 return
@@ -227,47 +240,44 @@ class Profiler(object):
         # Ignore the frame if its depth exceeds the specified depth.
         if self._depth is not None and current_depth > self._depth:
             return
-        
-
 
         ctx_local_counter = self._ctx_local_vars['counters'][ctx]
         if event in Profiler.CALL_EVENTS:
             ctx_local_counter.incr(frame, func_name)
 
-            unique_func_name = ctx_local_counter.unique_name(ctx,frame, func_name)
-            unique_func_name = ctx_local_counter.unique_name2(ctx,frame, func_name,current_depth)
+            unique_func_name = ctx_local_counter.unique_name(ctx, frame, func_name)
+            unique_func_name = ctx_local_counter.unique_name2(ctx, frame, func_name, current_depth)
             if frame is ctx_local_counter.first_frame:
                 unique_parent_name = None
             else:
                 parent_name = self._get_func_name(parent_frame)
                 unique_parent_name = ctx_local_counter.unique_name2(ctx,
-                    parent_frame, parent_name,current_depth-1)
+                                                                    parent_frame, parent_name, current_depth-1)
 
             # Create and start a timer for the entering function
             timer = self._timer_class.timers.get(unique_func_name)
             if timer is None:
-                timer=self._timer_class(
+                timer = self._timer_class(
                     unique_func_name,
                     parent_name=unique_parent_name,
                     display_name=func_name
                 )
             timer.start()
         elif event in Profiler.RETURN_EVENTS:
-            unique_func_name = ctx_local_counter.unique_name2(ctx,frame, func_name,current_depth)
+            unique_func_name = ctx_local_counter.unique_name2(ctx, frame, func_name, current_depth)
             timer = self._timer_class.timers.get(unique_func_name)
             if timer is not None:
                 # Stop the timer for the exiting function
                 timer.stop()
 
-    
     def __call__(self, func):
         """Make the profiler object to be a decorator."""
         @functools.wraps(func)
         def decorator(*args, **kwargs):
-            if(Profiler.GlobalDisable):
+            if (Profiler.GlobalDisable):
                 return func(*args, **kwargs)
-            
-            if(self.enable()):
+
+            if (self.enable()):
                 try:
                     return func(*args, **kwargs)
                 finally:
