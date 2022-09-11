@@ -67,6 +67,11 @@ class _FrameNameCounter(object):
         default = (None, None)
         return next(iter(six.iterkeys(self._counts)), default)[0]
 
+from . import Tree
+def default_show(p):
+    print('Time   [Hits * PerHit] Function name [Called from] [Function Location]\n'+\
+          '-----------------------------------------------------------------------')
+    print(Tree(p.root, threshold=0.5))
 
 class Profiler(object):
     GlobalDisable=False
@@ -77,7 +82,7 @@ class Profiler(object):
     CALL_EVENTS = ('call', 'c_call')
     RETURN_EVENTS = ('return', 'exception', 'c_return', 'c_exception')
 
-    def __init__(self, timer_class=Timer, depth=None, on_disable=None):
+    def __init__(self, timer_class=Timer, depth=4, on_disable=default_show):
         self._timer_class = timer_class
         self._depth = depth
         self._on_disable_callback = on_disable
