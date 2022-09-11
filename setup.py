@@ -23,7 +23,7 @@ setup(
     install_requires=[
         'monotonic>=1.3',
         'six>=1.10.0',
-        'tree-format==0.1.1',
+        'tree-format==0.1.2',
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
