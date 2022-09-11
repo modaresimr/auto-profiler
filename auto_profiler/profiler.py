@@ -255,6 +255,8 @@ class Profiler(object):
             # print('return ctx', frame_name)
             # Decrement the depth of the call stack.
             # if frame_name in self._ctx_local_vars['frame_depths'][ctx]:
+            if len(self._ctx_local_vars['frame_depths'][ctx]) == 0:
+                return
             self._ctx_local_vars['call_stack_depths'][ctx] -= 1
             current_depth = self._ctx_local_vars['frame_depths'][ctx].pop()
             # current_depth = self._ctx_local_vars['frame_depths'][ctx].pop(frame_name)
