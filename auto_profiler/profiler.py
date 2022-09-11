@@ -155,18 +155,14 @@ class Profiler(object):
         current_filename = re.sub('(\.pyc)$', '.py', __file__)
         self._excluded_func_names = (
             '<sys.setprofile>',
-            'enable  [auto_profiler\profiler',
-            'enable  [auto_profiler/profiler',
-            'enable  [auto_profiler.profiler',
-            'disable  [auto_profiler\profiler',
-            'disable  [auto_profiler/profiler',
-            'disable  [auto_profiler.profiler',
+            'enable auto_profiler',
+            'disable auto_profiler',
             # the following line number need to be updated if the
             # actual line number of the method `enable()` is changed.
-            self._format_func_name(current_filename, 89, 'enable'),
+            # self._format_func_name(current_filename, 89, 'enable'),
             # the following line number need to be updated if the
             # actual line number of the method `disable()` is changed.
-            self._format_func_name(current_filename, 109, 'disable'),
+            # self._format_func_name(current_filename, 109, 'disable'),
         )
 
     def _format_func_name(self, filename, firstlineno, name):
@@ -218,7 +214,7 @@ class Profiler(object):
         # Ignore the excluded functions.
         for f in self._excluded_func_names:
             # print('aaaa ', f in func_name, ' aaaa', f, 'b', func_name)
-            if f in func_name:
+            if all([ff in func_name for ff in f.split(' ')]):
                 return
         # if func_name in self._excluded_func_names:
         #     return
