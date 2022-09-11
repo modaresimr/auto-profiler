@@ -48,12 +48,7 @@ def fact(i):
     return i*fact(i-1)
 
 
-def show(p):
-    print('Time   [Hits * PerHit] Function name [Called from] [Function Location]\n'+\
-          '-----------------------------------------------------------------------')
-    print(Tree(p.root, threshold=0.5))
-    
-@Profiler(depth=4, on_disable=show)
+@Profiler()
 def main():
     for i in range(5):
         f1()
@@ -130,6 +125,24 @@ and it will show you the profiling result:
 2.503s  main
 ├── 1.001s  sleep1
 └── 1.501s  sleep2
+
+```
+
+## advanced setup
+
+
+```
+def show(p):
+    print('Time   [Hits * PerHit] Function name [Called from] [Function Location]\n'+\
+          '-----------------------------------------------------------------------')
+    print(Tree(p.root, threshold=0.5))
+    
+@Profiler(depth=4, on_disable=show)
+def main():
+    for i in range(5):
+        f1()
+
+    fact(3)
 
 ```
 
