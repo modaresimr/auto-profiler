@@ -278,12 +278,13 @@ class Timer(object):
 
         def __enter__(self):
             """Make the timer object to be a context manager."""
-            timer = Timer.instance(self.name)
-            Timer._parent.append(timer)
-            timer.start()
+            self.timer = Timer.instance(self.name)
+            Timer._parent.append(self.timer)
+            self.timer.start()
 
         def __exit__(self, exc_type, exc_value, traceback):
             """Make the timer object to be a context manager."""
-            timer = Timer.instance(self.name)
+
             Timer._parent.pop()
-            timer.stop()
+            self.timer.stop()
+            self.timer = None
