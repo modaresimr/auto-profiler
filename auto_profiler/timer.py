@@ -65,6 +65,13 @@ class _TimerMap(object):
             raise RuntimeError('timer name "%s" is duplicated' % name)
         timers[name] = timer
 
+    def remove(self, context, name):
+        """Add the given timer into the timer mapping."""
+        timers = self.get_map(context)
+        if not (name in timers):
+            raise RuntimeError('timer name "%s" is not exist to be removed' % name)
+        del timers[name]
+
 
 def default_show(p):
     from .tree import Tree
@@ -117,19 +124,24 @@ class Timer(object):
 
     @classmethod
     def instance(cls, name, on_stop=default_show,
-                 dummy=False, display_name=None):
+                 dummy=False, display_name=None, reset_on_no_context=True):
         display_name = display_name or name
-
-        if len(Timer._parent):
+        hasParent = len(Timer._parent) > 0
+        if hasParent:
             parent_name = Timer._parent[-1].name
             on_stop = None
+
             name = parent_name+name
         else:
-            import random
-            name = f'{random.random()}'
             parent_name = None
+            if reset_on_no_context:
+                cls._timer_map.get_map(cls._default_ctx).clear()
 
         timer = cls._timer_map.get(cls._default_ctx, name)
+        # if not hasParent and timer:
+        #     cls._timer_map.remove(cls._default_ctx, name)
+        #     timer = None
+
         if timer == None:
             timer = Timer(name, parent_name, on_stop, dummy, display_name)
         return timer
