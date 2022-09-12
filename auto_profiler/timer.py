@@ -68,7 +68,7 @@ class _TimerMap(object):
 
 def default_show(p):
     from .tree import Tree
-    print(Tree(p, span_unit='ms'))
+    print(Tree(p, span_unit='auto'))
 
 
 class Timer(object):
@@ -208,7 +208,7 @@ class Timer(object):
             'ms' -- in milliseconds
             'us' -- in microseconds
         """
-        multipliers = dict(s=1, ms=1000, us=1000000)
+        multipliers = dict(m=1/60, s=1, ms=1000, us=1000000)
         assert unit in multipliers, '`unit` must be one of %s' % multipliers.keys()
 
         if self._dummy:
