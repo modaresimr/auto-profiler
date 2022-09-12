@@ -118,12 +118,17 @@ class Timer(object):
     @classmethod
     def instance(cls, name, on_stop=default_show,
                  dummy=False, display_name=None):
-        parent_name = None
+        display_name = display_name or name
+
         if len(Timer._parent):
             parent_name = Timer._parent[-1].name
-            display_name = display_name or name
-            name = parent_name+name
             on_stop = None
+            name = parent_name+name
+        else:
+            import random
+            name = f'{random.random()}'
+            parent_name = None
+
         timer = cls._timer_map.get(cls._default_ctx, name)
         if timer == None:
             timer = Timer(name, parent_name, on_stop, dummy, display_name)
@@ -256,7 +261,7 @@ class Timer(object):
             """Make the profiler object to be a decorator."""
             @functools.wraps(func)
             def decorator(*args, **kwargs):
-                with Timer.instance(self.name):
+                with self:
                     return func(*args, **kwargs)
             return decorator
 
