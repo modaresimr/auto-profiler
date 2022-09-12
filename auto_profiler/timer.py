@@ -126,11 +126,10 @@ class Timer(object):
     def instance(cls, name, on_stop=default_show,
                  dummy=False, display_name=None, reset_on_no_context=True):
         display_name = display_name or name
-        hasParent = len(Timer._parent) > 0
-        if hasParent:
+
+        if len(Timer._parent):
             parent_name = Timer._parent[-1].name
             on_stop = None
-
             name = parent_name+name
         else:
             parent_name = None
@@ -285,6 +284,6 @@ class Timer(object):
 
         def __exit__(self, exc_type, exc_value, traceback):
             """Make the timer object to be a context manager."""
-            Timer._parent.pop()
             timer = Timer.instance(self.name)
+            Timer._parent.pop()
             timer.stop()
