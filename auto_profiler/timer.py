@@ -68,9 +68,7 @@ class _TimerMap(object):
 
 def default_show(p):
     from .tree import Tree
-    print('Time   [Hits * PerHit] Function name [Called from] [Function Location]\n' +
-          '-----------------------------------------------------------------------')
-    print(Tree(p.root, threshold=0.5))
+    print(Tree(p, span_unit='ms'))
 
 
 class Timer(object):
@@ -92,6 +90,7 @@ class Timer(object):
     _default_ctx = _ThreadLocalContext()
 
     _timer_map = _TimerMap()
+    _parent = []
 
     def __init__(self, name, parent_name=None, on_stop=default_show,
                  dummy=False, display_name=None):
@@ -108,10 +107,27 @@ class Timer(object):
         self._num_stop_call = 0
         self._children = []
 
+        timer = self._timer_map.get(self.get_context(), self._name)
+        if timer == None:
+            timer = self
         if self._parent_name is not None:
-            self.parent.add_child(self)
+            self.parent.add_child(timer)
 
-        self._timer_map.add(self.get_context(), self._name, self)
+        self._timer_map.add(self.get_context(), self._name, timer)
+
+    @classmethod
+    def instance(cls, name, on_stop=default_show,
+                 dummy=False, display_name=None):
+        parent_name = None
+        if len(Timer._parent):
+            parent_name = Timer._parent[-1].name
+            display_name = display_name or name
+            name = parent_name+name
+            on_stop = None
+        timer = cls._timer_map.get(cls._default_ctx, name)
+        if timer == None:
+            timer = Timer(name, parent_name, on_stop, dummy, display_name)
+        return timer
 
     @classmethod
     def get_context(cls):
@@ -224,8 +240,34 @@ class Timer(object):
 
     def __enter__(self):
         """Make the timer object to be a context manager."""
+        Timer._parent.append(self)
         self.start()
 
     def __exit__(self, exc_type, exc_value, traceback):
         """Make the timer object to be a context manager."""
+        Timer._parent.pop()
         self.stop()
+
+    class auto_timer:
+        def __init__(self, name):
+            self.name = name
+
+        def __call__(self, func):
+            """Make the profiler object to be a decorator."""
+            @functools.wraps(func)
+            def decorator(*args, **kwargs):
+                with Timer.instance(self.name):
+                    return func(*args, **kwargs)
+            return decorator
+
+        def __enter__(self):
+            """Make the timer object to be a context manager."""
+            timer = Timer.instance(self.name)
+            Timer._parent.append(timer)
+            timer.start()
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            """Make the timer object to be a context manager."""
+            Timer._parent.pop()
+            timer = Timer.instance(self.name)
+            timer.stop()
