@@ -7,7 +7,7 @@ import collections
 import functools
 import re
 import sys
-
+from . import utils
 import six
 
 from .timer import Timer
@@ -88,9 +88,16 @@ class Profiler(object):
 
     def enable(self):
         if (len(Profiler._stack) > 0):
-            print(RuntimeError('Can not handle internal use of deprecated '))
+            print(RuntimeError('profiler is already running '))
             return False
 
+        if (len(self._parents) > 0):
+            print(RuntimeError('profiler enabling but not disabled called '))
+            return False
+        Timer._timer_map.get_map(Timer._default_ctx).clear()
+        self._parents=[Timer('program',ui=self.ui)]
+
+        self._parents[-1].start()
         Profiler._stack.append('i')
 
         # It's necessary to delay calling `timer_class.get_context()` here
@@ -122,20 +129,30 @@ class Profiler(object):
         self._ctx_local_vars['frame_depths'].pop(ctx)
         self._ctx_local_vars['counters'].pop(ctx)
 
+        
+        for p in self._parents:
+            if not ('__exit__' in p.name or 'disable' in p.name or 'program' in p.name):
+                print('error exited not successfully',p.name)
+            p.stop()
+        self._parents.clear()
+        
         # If a callback function is given, call it after this profiler is disabled.
         if self._on_disable_callback is not None:
             self._on_disable_callback(self)
 
         return self
 
-    def __init__(self, timer_class=Timer, depth=4, on_disable=default_show, filterExternalLibraries=True, eliminateWorkspacePath=True, eliminateExternalLibrariesPath=True):
+    def __init__(self, timer_class=Timer, depth=4, on_disable=default_show, filterExternalLibraries=True, eliminateWorkspacePath=True, eliminateExternalLibrariesPath=True,ui=utils.in_notebook()):
         self._timer_class = timer_class
         self._depth = depth
+        self._parents=[]
+        if ui and on_disable==default_show:
+            on_disable=None
+        self.ui=ui
         self._on_disable_callback = on_disable
         self._filterExternalLibraries = filterExternalLibraries
         self._eliminateWorkspacePath = eliminateWorkspacePath
         self._eliminateExternalLibrariesPath = eliminateExternalLibrariesPath
-
         self._ctx_local_vars = dict(
             # Mapping: context -> call_stack_depth [PER CONTEXT]
             #                     (The depth of the call stack).
@@ -157,6 +174,9 @@ class Profiler(object):
             '<sys.setprofile>',
             'enable auto_profiler',
             'disable auto_profiler',
+            '__exit__',
+            '__enter__ auto_profiler',
+            
             # the following line number need to be updated if the
             # actual line number of the method `enable()` is changed.
             # self._format_func_name(current_filename, 89, 'enable'),
@@ -169,12 +189,15 @@ class Profiler(object):
         return '{2}  [{0}:{1}]'.format(self._filterPath(filename), firstlineno, name)
 
     def _filterPath(self, path):
+        if ('auto_profiler\\profiler' in path or 'auto_profiler/profiler' in path):
+            return ' '
         if (self._eliminateWorkspacePath and path.startswith(workingdir)):
             return path[len(workingdir)+1:]
         if (self._eliminateWorkspacePath and 'site-packages/' in path):
             return path.split('site-packages/')[1]
         if (self._eliminateWorkspacePath and 'python/' in path):
             return path.split('python/')[1]
+        return ' '
 
     def _get_func_name(self, frame):
         fcode = frame.f_code
@@ -205,7 +228,10 @@ class Profiler(object):
         is_c = event.startswith('c_')
 
         if is_c:  # C function
-            func_name = '<%s.%s>' % (arg.__module__, arg.__name__)
+            if arg.__module__:
+                func_name = '`%s.%s`' % (arg.__module__, arg.__name__)
+            else:
+                func_name = '`%s`' % (arg.__name__)
             parent_frame = frame
         else:  # Python function
             func_name = self._get_func_name(frame)
@@ -230,7 +256,8 @@ class Profiler(object):
         if self._filterExternalLibraries and not frame.f_code.co_filename.startswith(workingdir):
             if not (parent_frame):
                 return
-            if not parent_frame.f_code.co_filename.startswith(workingdir):
+            coname=parent_frame.f_code.co_filename
+            if not coname.startswith(workingdir) and not coname.startswith('<ipython-input') :
                 return
 
         current_depth = 0
@@ -276,22 +303,41 @@ class Profiler(object):
                                                                     parent_frame, parent_name, current_depth-1)
             # print('call parent', unique_parent_name)
             # Create and start a timer for the entering function
-            timer = self._timer_class.timers.get(unique_func_name)
+            # timer = self._timer_class.timers.get(unique_func_name)
+            # if timer is None:
+            #     timer = self._timer_class(
+            #         unique_func_name,
+            #         parent_name=unique_parent_name,
+            #         display_name=func_name,
+            #         on_stop=None,
+            #         ui=self.ui
+            #     )
+            parent_name=self._parents[-1].name
+            current_name=unique_func_name+parent_name 
+            
+            timer = self._timer_class.timers.get(current_name)
+            
             if timer is None:
                 timer = self._timer_class(
-                    unique_func_name,
-                    parent_name=unique_parent_name,
+                    current_name,
+                    parent_name=parent_name, 
                     display_name=func_name,
-                    on_stop=None
+                    on_stop=None,
+                    ui=self.ui
                 )
+            
+            # timer = Timer.instance(unique_func_name,ui=self.ui,display_name=func_name,on_stop=None)
+            self._parents.append(timer)
             timer.start()
         elif event in Profiler.RETURN_EVENTS:
             unique_func_name = ctx_local_counter.unique_name2(ctx, frame, func_name, current_depth)
-            timer = self._timer_class.timers.get(unique_func_name)
+            # timer = self._timer_class.timers.get(unique_func_name)
+            timer = self._parents.pop()
+            timer.stop()
             # print('return ', unique_func_name)
-            if timer is not None:
-                # Stop the timer for the exiting function
-                timer.stop()
+            # if timer is not None:
+            #     # Stop the timer for the exiting function
+            #     timer.stop()
 
     def __call__(self, func):
         """Make the profiler object to be a decorator."""
@@ -300,9 +346,13 @@ class Profiler(object):
             if (Profiler.GlobalDisable):
                 return func(*args, **kwargs)
 
-            if (self.enable()):
-                try:
-                    return func(*args, **kwargs)
-                finally:
-                    self.disable()
+            with self:
+                return func(*args, **kwargs)
+            
         return decorator
+
+    def __enter__(self):
+        self.enable()
+
+    def __exit__(self, exc_type=None, exc_value=None, traceback=None):
+        self.disable()

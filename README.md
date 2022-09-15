@@ -1,6 +1,6 @@
 # auto_profiler
 
-A timer for profiling a Python function or snippet.
+A realtime timer for profiling a Python function or snippet.
 
 ## Features
 - Filtering external libraries profiling.
@@ -23,9 +23,18 @@ Development version:
 $ pip install -e git+https://github.com/modaresimr/auto_profiler.git#egg=auto_profiler
 ```
 
+Install in Jupyter
+
+```bash
+$ pip install ipytree
+$ jupyter nbextension enable --py --sys-prefix ipytree
+```
+
+
 
 ## Quick start
 
+[Jupyter Notebook](example.ipynb)
 ### Auto profiling
 More commonly, chances are that we want to measure the execution time of an entry function and all its subfunctions. In this case, it's too tedious to do it manually, and we can leverage `Profiler` to inject all the timing points for us automatically:
 
@@ -62,6 +71,8 @@ if __name__ == '__main__':
 ```
 
 #### Example Output
+##### In Jupyter
+![example.gif](https://github.com/modaresimr/auto_profiler/master/example.gif)
 ```
 
 Time   [Hits * PerHit] Function name [Called from] [function location]

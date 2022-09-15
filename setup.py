@@ -10,8 +10,8 @@ with open("README.md", "r") as fh:
 
 setup(
     name='auto_profiler',
-    version=1.9,
-    description='A timer for profiling a Python function or snippet.',
+    version=2.0,
+    description='A realtime timer for profiling a Python function or snippet.',
     long_description=long_description,
     long_description_content_type="text/markdown",
     author='modaresi mr',
@@ -24,6 +24,9 @@ setup(
         'monotonic>=1.3',
         'six>=1.10.0',
         'tree-format==0.1.2',
+        'ipytree',
+        'numpy',
+
     ],
     classifiers=[
         "Programming Language :: Python :: 3",

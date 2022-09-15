@@ -33,6 +33,7 @@ class Tree(object):
         multipliers = dict(m=1/60, s=1, ms=1000, us=1000000)
         unit = self._span_unit
         if unit == 'auto':
+            unit='ms'
             for m in multipliers:
                 if 1/multipliers[m] < tim:
                     unit = m

@@ -8,8 +8,8 @@ import threading
 
 import monotonic
 import six
-
-
+from .ui import TreeUI
+from . import utils
 class classproperty(property):
     """A decorator that converts a method into a read-only class property.
 
@@ -99,8 +99,8 @@ class Timer(object):
     _timer_map = _TimerMap()
     _parent = []
 
-    def __init__(self, name, parent_name=None, on_stop=default_show,
-                 dummy=False, display_name=None):
+    def __init__(self, name, parent_name=None, on_stop=None,
+                 dummy=False, display_name=None,ui=False):
         self._name = name
         self._parent_name = parent_name
         self._on_stop_callback = on_stop
@@ -117,32 +117,42 @@ class Timer(object):
         timer = self._timer_map.get(self.get_context(), self._name)
         if timer == None:
             timer = self
-        if self._parent_name is not None:
-            self.parent.add_child(timer)
+        self.ui=None
 
+        if self._parent_name is not None:
+            self.parent.add_child(timer)  
+        elif ui:
+            self.ui=TreeUI(self)
         self._timer_map.add(self.get_context(), self._name, timer)
 
-    @classmethod
-    def instance(cls, name, on_stop=default_show,
-                 dummy=False, display_name=None, reset_on_no_context=True):
-        display_name = display_name or name
+    @classmethod 
+    def root(cls):
+        return Timer._parent[0] if len(Timer._parent) else None
 
+    @classmethod
+    def instance(cls, name, on_stop=None,dummy=False, display_name=None,
+                     reset_on_no_context=True,ui=utils.in_notebook()):
+        display_name = display_name or name
+        
         if len(Timer._parent):
             parent_name = Timer._parent[-1].name
-            on_stop = None
             name = parent_name+name
         else:
+            if on_stop==None and not ui:
+                on_stop=default_show
             parent_name = None
             if reset_on_no_context:
                 cls._timer_map.get_map(cls._default_ctx).clear()
 
         timer = cls._timer_map.get(cls._default_ctx, name)
+
         # if not hasParent and timer:
         #     cls._timer_map.remove(cls._default_ctx, name)
         #     timer = None
 
         if timer == None:
-            timer = Timer(name, parent_name, on_stop, dummy, display_name)
+            timer = Timer(name, parent_name, on_stop, dummy, display_name,ui=ui)
+        
         return timer
 
     @classmethod
@@ -194,29 +204,37 @@ class Timer(object):
         return self._children
 
     def start(self):
+        # print('start',self.name)
         if (self._num_stop_call != self._num_start_call):
             raise RuntimeError('timer %s: new start called before stoping previous timer' % self._name)
 
         self._start = monotonic.monotonic()
         self._num_start_call += 1
 
+        if self.ui:
+            self.ui.start_priodic_update()
         return self
 
+    def is_running(self):
+        return self._num_stop_call != self._num_start_call
     def stop(self):
+        # print('stop ',self.name)
         if not self._dummy and self._start is None:
             raise RuntimeError('timer %s: .start() has not been called' % self._name)
         if (self._num_stop_call >= self._num_start_call):
             raise RuntimeError('timer %s: new stop called before starting timer' % self._name)
-        self._stop = monotonic.monotonic()
+        
+        # self._stop = 
         self._num_stop_call += 1
-        self._duration += self._stop-self._start
+        self._duration += monotonic.monotonic()-self._start
         # If a callback function is given, call it after this timer is stopped.
         if self._on_stop_callback is not None:
             self._on_stop_callback(self)
-
+        if self.ui:
+            self.ui.stop_update()
         return self
 
-    def span(self, unit='s'):
+    def span(self, unit='s',realtime=False):
         """Return the elapsed time as a fraction.
 
         unit:
@@ -231,11 +249,15 @@ class Timer(object):
             # For dummy timer, return the sum of all children timers
             return sum(child.span(unit) for child in self._children)
 
-        if self._stop is None:
+        if not realtime and self.is_running():
             raise RuntimeError('timer %s: .stop() has not been called' % self._name)
+        
+        current=0
+        if realtime and self.is_running():
+            current=monotonic.monotonic()-self._start
 
         # return (self._stop - self._start) * multipliers[unit]
-        return self._duration * multipliers[unit]
+        return (self._duration+current) * multipliers[unit]
 
     @classmethod
     def time(cls, name, parent_name=None, on_stop=None, display_name=None):
@@ -259,7 +281,7 @@ class Timer(object):
         Timer._parent.append(self)
         self.start()
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type=None, exc_value=None, traceback=None):
         """Make the timer object to be a context manager."""
         Timer._parent.pop()
         self.stop()
@@ -272,7 +294,7 @@ class Timer(object):
             """Make the profiler object to be a decorator."""
             @functools.wraps(func)
             def decorator(*args, **kwargs):
-                with self:
+                with Timer.instance(self.name):
                     return func(*args, **kwargs)
             return decorator
 
