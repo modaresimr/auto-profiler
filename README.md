@@ -57,21 +57,20 @@ def fact(i):
     return i*fact(i-1)
 
 
-@Profiler()
+
 def main():
     for i in range(5):
         f1()
 
     fact(3)
 
-
-if __name__ == '__main__':
+with Profiler():
     main()
 
 ```
 
 #### Example Output
-##### In Jupyter
+##### In Jupyter (realtime view)
 ![example.gif](https://raw.githubusercontent.com/modaresimr/auto_profiler/master/example.gif)
 ```
 
