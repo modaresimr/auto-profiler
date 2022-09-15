@@ -9,7 +9,6 @@ class TreeUI:
         self.root_node=Node('root')
         self.tree.add_node(self.root_node)
         import IPython
-        IPython.display.display('Time   [Hits * PerHit] Function name [Called from] [Function Location]' )
         IPython.display.display(self.tree)
         self.node_map={}
         self._threshold=.1
@@ -91,7 +90,7 @@ class TreeUI:
         tim = timer.span(realtime=True)
         span = self.format_span(tim)
         per_call = self.format_span(tim/timer._num_start_call)
-        node = '%s [%d * %s] &nbsp %s' % (span, timer._num_start_call, per_call, timer.display_name)
+        node = '%s [%d × %s] &nbsp %s' % (span, timer._num_start_call, per_call, timer.display_name)
         return node
 
 

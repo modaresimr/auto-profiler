@@ -105,7 +105,7 @@ class Timer(object):
         self._parent_name = parent_name
         self._on_stop_callback = on_stop
         self._dummy = dummy
-        self._display_name = display_name or name
+        self._display_name = (display_name or name).replace('<','`').replace('>','`')
 
         self._start = None
         self._stop = None

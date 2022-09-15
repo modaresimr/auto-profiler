@@ -197,7 +197,10 @@ class Profiler(object):
             return path.split('site-packages/')[1]
         if (self._eliminateWorkspacePath and 'python/' in path):
             return path.split('python/')[1]
-        return ' '
+        if 'ipython' in path:
+            spl=path.split('-')
+            return f'cell{spl[2]}'
+        return path
 
     def _get_func_name(self, frame):
         fcode = frame.f_code
@@ -352,6 +355,9 @@ class Profiler(object):
         return decorator
 
     def __enter__(self):
+        if self.ui:
+            import IPython
+            IPython.display.display('Time   [Hits × PerHit] Function name [Called from] [Function Location]' )
         self.enable()
 
     def __exit__(self, exc_type=None, exc_value=None, traceback=None):

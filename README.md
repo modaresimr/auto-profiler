@@ -72,7 +72,7 @@ if __name__ == '__main__':
 
 #### Example Output
 ##### In Jupyter
-![example.gif](https://github.com/modaresimr/auto_profiler/master/example.gif)
+![example.gif](https://raw.githubusercontent.com/modaresimr/auto_profiler/master/example.gif)
 ```
 
 Time   [Hits * PerHit] Function name [Called from] [function location]
