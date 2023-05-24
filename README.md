@@ -1,6 +1,14 @@
 # auto_profiler
 
-A realtime timer for profiling a Python function or snippet.
+This Software presents a real-time timer designed for profiling Python functions or code snippets within the Jupyter environment. The timer integrates seamlessly with Jupyter widgets, providing an interactive and extendable tree-based visualization of profiling results.
+
+Key features of the proposed timer include the ability to filter out external library profiling, allowing users to focus solely on their own code. Additionally, the timer incorporates a threshold-based filter to exclude functions with very short execution times, enabling users to concentrate on more significant performance concerns.
+
+Furthermore, the timer supports variable depth analysis, facilitating the identification of time-consuming functions within nested call hierarchies. It also handles loop or multiple function calls, providing comprehensive profiling capabilities for iterative or repetitive code structures. Moreover, recursive function calls are appropriately handled, ensuring accurate and insightful profiling results.
+
+To optimize efficiency, users have the option to globally disable the timer by setting Profiler.GlobalDisable to True, thereby saving valuable execution time when profiling is not required.
+
+Overall, this real-time timer with interactive Jupyter widgets and an extendable tree-based interface empowers users to effectively profile Python functions or code snippets, filter results based on specific criteria, and gain deeper insights into their code's performance characteristics.
 
 ## Features
 - Filtering external libraries profiling.
