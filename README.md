@@ -1,4 +1,5 @@
 # auto_profiler
+[![](https://static.pepy.tech/badge/auto_profiler?style=flat-square)](https://www.pepy.tech/projects/auto_profiler)
 
 This Software presents a real-time timer designed for profiling Python functions or code snippets within the Jupyter environment. The timer integrates seamlessly with Jupyter widgets, providing an interactive and extendable tree-based visualization of profiling results.
 
